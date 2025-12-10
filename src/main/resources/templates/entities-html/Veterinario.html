@@ -45,7 +45,7 @@
                         <a th:href="@{/veterinarios/editar/{id}(id=${vet.id})}" class="btn btn-sm btn-outline-primary">Editar</a>
                         <a th:href="@{/veterinarios/eliminar/{id}(id=${vet.id})}"
                            class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('¿Seguro? Si tiene citas, no se podrá borrar.');">
+                           onclick="return confirm('¿Seguro? Si tiene citas, quedarán sin veterinario asignado.');">
                             Borrar
                         </a>
                     </td>
