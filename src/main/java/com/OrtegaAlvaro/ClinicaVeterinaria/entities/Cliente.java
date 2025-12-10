@@ -36,12 +36,16 @@ public class Cliente {
 
     @Column(unique = true, nullable = false, length = 9)
     @NotBlank(message = "El DNI es obligatorio")
-    @Pattern(regexp = "^[0-9]{8}[A-Za-z]$", message = "El formato debe ser 8 números seguidos de una letra")
+    @Pattern(
+            regexp = "^[0-9]{8}[A-HJ-NP-TV-Z]$",
+            message = "Formato de DNI inválido. Deben ser 8 números y una letra válida (no se permiten I, O, U, Ñ)")
     private String dni;
 
     @Column(length = 15)
     @NotBlank(message = "El teléfono es obligatorio")
-    @Pattern(regexp = "^[6789][0-9]{8}$", message = "Debe introducir un número de teléfono móvil o fijo válido (9 dígitos)")
+    @Pattern(
+            regexp = "^\\+34 ?[6789](?: ?[0-9]){8}$",
+            message = "Debe introducir un teléfono válido con prefijo +34 (con o sin espacios) y debe empezar con 6,7,8 o 9")
     private String telefono;
 
     private String direccion;

@@ -1,71 +1,43 @@
--- data.sql ACTUALIZADO
-
--- 1. CLIENTES (DNI únicos obligatorios)
 INSERT INTO cliente (nombre, apellidos, dni, telefono, email, direccion) VALUES
-('Juan', 'García Pérez', '11111111A', '600111222', 'juan.garcia@email.com', 'Calle Mayor 1'),
-('Ana', 'López Díaz', '22222222B', '600333444', 'ana.lopez@email.com', 'Av. Constitución 23'),
-('Pedro', 'Ramírez Soler', '33333333C', '700555666', 'pedro.ramirez@email.com', 'Plaza España 5'),
-('María', 'Fernández Gil', '44444444D', '611223344', 'maria.fer@email.com', 'C/ Pez 8'),
-('Luis', 'Gómez Arribas', '55555555E', '622998877', 'luis.gomez@email.com', 'Paseo del Prado 10'),
-('Elena', 'Vázquez Rojo', '66666666F', '633445566', 'elena.vaz@email.com', 'Av. América 100');
+('Vicente', 'Ruinez', '47344525C', '+34 655 88 77 11', 'vicenteruinez@tia.com', 'La tia'),
+('Esther', 'Díaz Navarro', '29876543Z', '+34 687 12 34 56', 'esther.diaz.navarro@hotmail.com', 'Avda. Libertad 45'),
+('Alvaro', 'Ortega Benitez', '47344555K', '+34 637 18 51 35', 'alvaroortegabenitez03@gmail.com', 'Calle 3 de abril 24'),
+('Ricardo', 'Soto Gil', '71009876Q', '+34 722 33 44 55', 'r.soto.gil@outlook.es', 'Plaza Mayor 1, Bajo'),
+('Silvia', 'Gómez Martín', '50123987F', '+34 633 99 00 11', 'silvia.gomez@gmail.com', 'Paseo de Gracia 101'),
+('Javier', 'Hernández Paz', '45678123G', '+34 699 88 77 66', 'javi.hpaz@hotmail.com', 'Calle Alameda 5, 2º');
 
--- 2. VETERINARIOS (Nº Colegiado único)
 INSERT INTO veterinario (nombre, apellidos, numero_colegiado, email, especialidad) VALUES
-('Laura', 'Martínez', 'VET-001', 'laura.vet@clinica.com', 'Cirugía'),
-('Carlos', 'Ruiz', 'VET-002', 'carlos.vet@clinica.com', 'Medicina Interna'),
-('Sofía', 'Alvarez', 'VET-003', 'sofia.vet@clinica.com', 'Dermatología'),
-('Pablo', 'Sánchez', 'VET-004', 'pablo.vet@clinica.com', 'Exóticos');
+('Laura', 'Martínez', 'VET-001', 'laura.martinez.vet@clinica.com', 'Cirugía'),
+('Carlos', 'Ruiz', 'VET-002', 'carlos.ruiz.vet@clinica.com', 'Medicina Interna'),
+('Sofía', 'Alvarez', 'VET-003', 'sofia.alvarez.derm@clinica.com', 'Dermatología'),
+('Pablo', 'Sánchez', 'VET-004', 'pablo.sanchez.exo@clinica.com', 'Exóticos'),
+('Ana', 'Vázquez', 'VET-005', 'ana.vazquez.oftal@clinica.com', 'Oftalmología');
 
--- 3. MASCOTAS
--- ID 1-3 (Juan), 4 (Ana), 5-6 (Pedro), 7 (María), 8 (Luis)
 INSERT INTO mascota (nombre, especie, raza, fecha_nacimiento, peso, cliente_id) VALUES
-('Bobby', 'Perro', 'Golden Retriever', '2020-05-20', 30.5, 1),
-('Thor', 'Perro', 'Bulldog Francés', '2021-01-10', 12.0, 1),
-('Luna', 'Gato', 'Común Europeo', '2019-08-15', 4.0, 1),
-('Michi', 'Gato', 'Siamés', '2018-03-10', 4.5, 2),
-('Lola', 'Ave', 'Periquito', '2022-03-01', 0.1, 3),
-('Rocky', 'Perro', 'Pastor Alemán', '2017-11-05', 35.0, 3),
-('Tambor', 'Conejo', 'Belier', '2021-06-20', 2.3, 4),
-('Simba', 'Gato', 'Persa', '2020-09-12', 5.1, 5);
+('Mortadelo', 'Perro', 'Caniche Toy', '2023-01-20', 5.5, 1),
+('Filemón', 'Perro', 'Caniche Toy', '2023-01-20', 6.0, 1),
+('Tambor', 'Conejo', 'Belier', '2024-06-01', 1.8, 2),
+('Bimba', 'Perro', 'Breton', '2020-08-15', 10.3, 3),
+('Arwen', 'Perro', 'Labrador', '2017-11-05', 36.2, 3),
+('Wiwi', 'Gato', 'Siamés', '2018-03-10', 4.5, 4),
+('Nermal', 'Gato', 'Persa', '2020-09-12', 5.3, 5);
 
--- 4. CITAS
--- Pasadas (Realizadas)
 INSERT INTO cita_veterinaria (fecha_hora, motivo, diagnostico, estado, mascota_id, veterinario_id) VALUES
-('2023-10-01 10:00:00', 'Vacunación Rabia', 'Paciente sano. Se aplica vacuna.', 'Realizada', 1, 2),
-('2023-10-05 11:30:00', 'Revisión anual', 'Todo correcto.', 'Realizada', 4, 2),
-('2023-10-10 16:00:00', 'Cojera pata trasera', 'Pequeña torcedura. Reposo.', 'Realizada', 2, 1),
-('2023-10-12 09:30:00', 'Pico largo', 'Se realiza limado.', 'Realizada', 5, 4);
+('2025-01-10 10:00:00', 'Vacunación anual', 'Paciente sano. Se aplica DHPPi.', 'Realizada', 1, 2),
+('2025-01-15 11:30:00', 'Revisión por picazón', 'Dermatitis atópica leve.', 'Realizada', 4, 3),
+('2025-01-25 16:00:00', 'Traumatismo ocular', 'Úlcera corneal leve.', 'Realizada', 5, 5),
+('2025-02-01 09:30:00', 'Crecimiento dental', 'Recorte de incisivos.', 'Realizada', 3, 4),
+('2025-12-12 17:00:00', 'Revisión post-operatoria', NULL, 'Pendiente', 2, 1),
+('2025-12-15 12:00:00', 'Vacuna Leishmania', NULL, 'Pendiente', 7, 2),
+('2025-12-20 16:30:00', 'Revisión piel anual', NULL, 'Pendiente', 6, 3),
+('2025-01-05 18:00:00', 'Limpieza dental', NULL, 'Cancelada', 4, 1);
 
--- Recientes / Pendientes
-INSERT INTO cita_veterinaria (fecha_hora, motivo, diagnostico, estado, mascota_id, veterinario_id) VALUES
-('2023-11-20 17:00:00', 'Vómitos', 'Gastroenteritis leve.', 'Realizada', 8, 2),
-('2025-01-15 10:00:00', 'Revisión post-operatoria', NULL, 'Pendiente', 2, 1),
-('2025-02-01 12:00:00', 'Vacuna Leishmania', NULL, 'Pendiente', 6, 2),
-('2025-02-02 16:30:00', 'Revisión piel', NULL, 'Pendiente', 3, 3);
-
--- Canceladas
-INSERT INTO cita_veterinaria (fecha_hora, motivo, diagnostico, estado, mascota_id, veterinario_id) VALUES
-('2023-09-15 18:00:00', 'Limpieza dental', NULL, 'Cancelada', 1, 1),
-('2023-11-01 11:00:00', 'Urgencia', NULL, 'Cancelada', 7, 4);
-
--- 5. TRATAMIENTOS (Asociados a las citas realizadas)
--- Cita 1 (Vacuna Bobby)
 INSERT INTO tratamiento (descripcion, medicamento, precio, observaciones, cita_id) VALUES
-('Vacuna Rabia', 'RabiesVac 2ml', 45.00, 'Sin reacciones adversas', 1),
-('Revisión General', NULL, 20.00, 'Constantes normales', 1);
-
--- Cita 3 (Cojera Thor)
-INSERT INTO tratamiento (descripcion, medicamento, precio, observaciones, cita_id) VALUES
-('Consulta Traumatología', NULL, 50.00, 'Exploración física', 3),
-('Antiinflamatorio Inyectable', 'Meloxicam', 15.50, 'Dosis inicial', 3),
-('Vendaje', NULL, 10.00, 'Vendaje blando', 3);
-
--- Cita 4 (Pico Lola)
-INSERT INTO tratamiento (descripcion, medicamento, precio, observaciones, cita_id) VALUES
-('Limado de pico', NULL, 25.00, 'Con micromotor', 4);
-
--- Cita 5 (Vómitos Simba)
-INSERT INTO tratamiento (descripcion, medicamento, precio, observaciones, cita_id) VALUES
-('Consulta Urgencia', NULL, 60.00, 'Horario tarde', 5),
-('Suero Subcutáneo', 'Ringer Lactato', 12.00, 'Hidratación', 5),
-('Antiemético', 'Cerenia', 22.00, 'Inyectable', 5);
+('Vacuna DHPPi', 'Canigen', 35.00, 'Lote 45B. Próximo recordatorio en 1 año.', 1),
+('Revisión General', NULL, 20.00, 'Constantes vitales normales. Peso estable.', 1),
+('Consulta Dermatología', NULL, 50.00, 'Se tomaron muestras para citología.', 2),
+('Champú terapéutico', 'Clorexiderm', 18.50, 'Uso 2 veces por semana.', 2),
+('Consulta Oftalmología', NULL, 65.00, 'Se aplicó fluoresceína.', 3),
+('Pomada Tópica Ocular', 'Terramicina', 14.00, 'Aplicar 3 veces al día.', 3),
+('Recorte de Incisivos', NULL, 25.00, 'Se pautó revisión cada 4 meses.', 4),
+('Sutura Menor', NULL, 40.00, 'Retirar puntos en 7 días.', 5);
