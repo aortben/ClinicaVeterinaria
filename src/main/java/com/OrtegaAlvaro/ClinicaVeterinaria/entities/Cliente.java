@@ -72,4 +72,19 @@ public class Cliente {
         mascotas.add(mascota);
         mascota.setCliente(this);
     }
+
+    public String getTelefonoFormateado() {
+        if (telefono == null) return "";
+
+        // Eliminar todos los espacios
+        String limpio = telefono.replaceAll(" ", "");
+
+        // Asegurar prefijo +34
+        if (!limpio.startsWith("+34")) {
+            limpio = "+34" + limpio.replaceFirst("^\\+?34", "");
+        }
+
+        // Devolver siempre "+34 NNNNNNNNN"
+        return limpio.substring(0, 3) + " " + limpio.substring(3);
+    }
 }
