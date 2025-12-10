@@ -161,8 +161,8 @@ public class CitaVeterinariaController {
         citaGuardada = citaService.save(citaForm);
         redirect.addFlashAttribute("success", "Cita creada. Puede añadir tratamientos a continuación.");
 
-        // Redirección al modo edición para facilitar la carga inmediata de tratamientos (Flujo Maestro-Detalle)
-        return "redirect:/citas/editar/" + citaGuardada.getId();
+        // Redirección a tratamientos tras crear una cita para agilizar el flujo.
+        return "redirect:/tratamientos/cita/" + citaGuardada.getId();
     }
 
     /**
