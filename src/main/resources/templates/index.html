@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Inicio - Clínica Alixar')}"></head>
+
+<body>
+
+<div th:replace="~{fragments/nav :: nav}"></div>
+
+<div class="container">
+    <h2 class="mb-4 text-secondary">Panel de Control</h2>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3 h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Clientes Registrados</h6>
+                    <p class="card-text display-6 fw-bold" th:text="${stats['totalClientes']}">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3 h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Mascotas Activas</h6>
+                    <p class="card-text display-6 fw-bold" th:text="${stats['totalMascotas']}">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3 h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Veterinarios</h6>
+                    <p class="card-text display-6 fw-bold" th:text="${stats['totalVeterinarios']}">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary border mb-3 h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Total Citas</h6>
+                    <p class="card-text display-6 fw-bold" th:text="${stats['totalCitas']}">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0">Últimas Citas Registradas</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Mascota</th>
+                    <th>Motivo</th>
+                    <th>Veterinario</th>
+                    <th>Estado</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="cita : ${ultimasCitas}">
+                    <td th:text="${#temporals.format(cita.fechaHora, 'dd-MM-yyyy HH:mm')}"></td>
+
+                    <td th:text="${cita.nombreMascotaStr}"></td>
+
+                    <td th:text="${cita.motivo}"></td>
+
+                    <td th:text="${cita.nombreVeterinarioStr}"></td>
+
+                    <td>
+                        <span class="badge bg-success" th:if="${cita.estado == 'Realizada'}">Realizada</span>
+                        <span class="badge bg-warning text-dark" th:if="${cita.estado == 'Pendiente'}">Pendiente</span>
+                        <span class="badge bg-danger" th:if="${cita.estado == 'Cancelada'}">Cancelada</span>
+                        <span class="badge bg-secondary" th:unless="${cita.estado == 'Realizada' || cita.estado == 'Pendiente' || cita.estado == 'Cancelada'}" th:text="${cita.estado}">Otro</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(ultimasCitas)}">
+                    <td colspan="5" class="text-center py-4 text-muted">No hay citas recientes.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+<body>
+
+<div th:replace="~{fragments/nav :: nav}"></div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow border-0 mt-4">
+                <div class="card-header bg-info text-white py-3">
+                    <h4 class="mb-0" th:text="${titulo}">Datos del Veterinario</h4>
+                </div>
+                <div class="card-body p-4">
+
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+                    <form th:action="@{/veterinarios/guardar}" th:object="${veterinario}" method="post">
+                        <input type="hidden" th:field="*{id}">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nombre</label>
+                                <input type="text" class="form-control" th:field="*{nombre}" th:errorclass="is-invalid">
+                                <div class="invalid-feedback" th:errors="*{nombre}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Apellidos</label>
+                                <input type="text" class="form-control" th:field="*{apellidos}" th:errorclass="is-invalid">
+                                <div class="invalid-feedback" th:errors="*{apellidos}"></div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nº Colegiado</label>
+                                <input type="text" class="form-control" th:field="*{numeroColegiado}" th:errorclass="is-invalid" placeholder="Ej: VET-0000">
+                                <div class="invalid-feedback" th:errors="*{numeroColegiado}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Especialidad</label>
+                                <select class="form-select" th:field="*{especialidad}">
+                                    <option value="General">Medicina General</option>
+                                    <option value="Cirugía">Cirugía</option>
+                                    <option value="Dermatología">Dermatología</option>
+                                    <option value="Traumatología">Traumatología</option>
+                                    <option value="Exóticos">Exóticos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email Profesional</label>
+                            <input type="email" class="form-control" th:field="*{email}" th:errorclass="is-invalid">
+                            <div class="invalid-feedback" th:errors="*{email}"></div>
+                        </div>
+
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <a href="/veterinarios" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success">Guardar Veterinario</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+<body>
+
+<div th:replace="~{fragments/nav :: nav}"></div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow border-0 mt-4">
+                <div class="card-header bg-warning py-3">
+                    <h4 class="mb-0 fw-bold text-dark" th:text="${titulo}">Datos de la Cita</h4>
+                </div>
+                <div class="card-body p-4">
+
+                    <form th:action="@{/citas/guardar}" th:object="${cita}" method="post">
+                        <input type="hidden" th:field="*{id}">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Fecha y Hora</label>
+                                <input type="datetime-local" step="60" class="form-control" th:field="*{fechaHora}" th:errorclass="is-invalid">
+                                <div class="invalid-feedback" th:errors="*{fechaHora}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Estado</label>
+                                <select class="form-select" th:field="*{estado}">
+                                    <option value="Pendiente">Pendiente</option>
+                                    <option value="Realizada">Realizada</option>
+                                    <option value="Cancelada">Cancelada</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Mascota (Paciente)</label>
+                                <select class="form-select" th:field="*{mascota}" th:errorclass="is-invalid">
+                                    <option value="">-- Seleccionar Mascota --</option>
+                                    <option th:each="m : ${mascotas}"
+                                            th:value="${m.id}"
+                                            th:text="${m.nombre} + ' (' + ${m.especie} + ') - Dueño: ' + ${m.cliente.nombre}">
+                                    </option>
+                                </select>
+                                <div class="invalid-feedback">Selecciona una mascota.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Veterinario Asignado</label>
+                                <select class="form-select" th:field="*{veterinario}" th:errorclass="is-invalid">
+                                    <option value="">-- Seleccionar Dr/a --</option>
+                                    <option th:each="v : ${veterinarios}"
+                                            th:value="${v.id}"
+                                            th:text="${v.nombre} + ' ' + ${v.apellidos} + ' (' + ${v.especialidad} + ')'">
+                                    </option>
+                                </select>
+                                <div class="invalid-feedback">Asigna un veterinario.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Motivo de la consulta</label>
+                            <input type="text" class="form-control" th:field="*{motivo}" th:errorclass="is-invalid" placeholder="Ej: Vacunación anual">
+                            <div class="invalid-feedback" th:errors="*{motivo}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Diagnóstico (Opcional)</label>
+                            <textarea class="form-control" th:field="*{diagnostico}" rows="3" placeholder="Resultados de la consulta..."></textarea>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <a href="/citas" class="btn btn-secondary">Cancelar</a>
+
+                            <button type="submit" class="btn btn-primary fw-bold">
+                                    <span th:if="${cita.id == null}">
+                                        <i class="fas fa-arrow-right me-1"></i> Siguiente: Añadir Tratamientos
+                                    </span>
+                                <span th:if="${cita.id != null}">
+                                        <i class="fas fa-save me-1"></i> Guardar Cambios
+                                    </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+<body>
+
+<div th:replace="~{fragments/nav :: nav}"></div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow border-0 mt-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="fas fa-user-edit me-2"></i><span th:text="${titulo}"></span>
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+                    <form th:action="@{/clientes/guardar}" th:object="${cliente}" method="post">
+                        <input type="hidden" th:field="*{id}">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{nombre}" th:errorclass="is-invalid" placeholder="Ej: Ana">
+                                <div class="invalid-feedback" th:errors="*{nombre}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Apellidos <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{apellidos}" th:errorclass="is-invalid" placeholder="Ej: López">
+                                <div class="invalid-feedback" th:errors="*{apellidos}"></div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">DNI <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{dni}" th:errorclass="is-invalid" placeholder="12345678X">
+                                <div class="invalid-feedback" th:errors="*{dni}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Teléfono <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{telefono}" th:errorclass="is-invalid" placeholder="600...">
+                                <div class="invalid-feedback" th:errors="*{telefono}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" th:field="*{email}" placeholder="correo@ejemplo.com">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Dirección</label>
+                            <textarea class="form-control" th:field="*{direccion}" rows="2"></textarea>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="/clientes" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success fw-bold">
+                                <i class="fas fa-save me-1"></i> Guardar Cliente
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

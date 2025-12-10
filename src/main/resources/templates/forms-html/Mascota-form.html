@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+<body>
+
+<div th:replace="~{fragments/nav :: nav}"></div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow border-0 mt-4">
+                <div class="card-header bg-success text-white py-3">
+                    <h4 class="mb-0" th:text="${titulo}">Datos de la Mascota</h4>
+                </div>
+                <div class="card-body p-4">
+
+                    <form th:action="@{/mascotas/guardar}" th:object="${mascota}" method="post">
+                        <input type="hidden" th:field="*{id}">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nombre</label>
+                                <input type="text" class="form-control" th:field="*{nombre}" th:errorclass="is-invalid">
+                                <div class="invalid-feedback" th:errors="*{nombre}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Especie</label>
+                                <input type="text" class="form-control" th:field="*{especie}" th:errorclass="is-invalid" placeholder="Ej: Perro, Gato...">
+                                <div class="invalid-feedback" th:errors="*{especie}"></div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Raza</label>
+                                <input type="text" class="form-control" th:field="*{raza}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Peso (kg)</label>
+                                <input type="number" step="0.1" class="form-control" th:field="*{peso}" th:errorclass="is-invalid">
+                                <div class="invalid-feedback" th:errors="*{peso}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Fecha de Nacimiento</label>
+                            <input type="date" class="form-control" th:field="*{fechaNacimiento}" th:errorclass="is-invalid">
+                            <div class="invalid-feedback" th:errors="*{fechaNacimiento}"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Dueño (Cliente)</label>
+                            <select class="form-select" th:field="*{cliente}" th:errorclass="is-invalid">
+                                <option value="">-- Seleccionar Cliente --</option>
+                                <option th:each="cliente : ${clientes}"
+                                        th:value="${cliente.id}"
+                                        th:text="${cliente.nombre} + ' ' + ${cliente.apellidos} + ' (' + ${cliente.dni} + ')'">
+                                </option>
+                            </select>
+                            <div class="invalid-feedback">Debes asignar un dueño.</div>
+                            <div class="form-text">Si el cliente no existe, <a href="/clientes/nuevo">créalo aquí primero</a>.</div>
+                        </div>
+
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <a href="/mascotas" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-success">Guardar Mascota</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Veterinarios')}"></head>
+<body>
+
+<div th:replace="~{fragments/nav :: nav}"></div>
+
+<div class="container">
+
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Equipo Veterinario</h2>
+        <a href="/veterinarios/nuevo" class="btn btn-primary">Nuevo Profesional</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th>Nº Colegiado</th>
+                    <th>Nombre</th>
+                    <th>Apellidos</th>
+                    <th>Especialidad</th>
+                    <th>Email</th>
+                    <th class="text-end pe-4">Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="vet : ${veterinarios}">
+                    <td class="fw-bold" th:text="${vet.numeroColegiado}"></td>
+                    <td th:text="${vet.nombre}"></td>
+                    <td th:text="${vet.apellidos}"></td>
+                    <td><span class="badge bg-info text-dark" th:text="${vet.especialidad}"></span></td>
+                    <td th:text="${vet.email}"></td>
+                    <td class="text-end pe-3">
+                        <a th:href="@{/veterinarios/editar/{id}(id=${vet.id})}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        <a th:href="@{/veterinarios/eliminar/{id}(id=${vet.id})}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('¿Seguro? Si tiene citas, no se podrá borrar.');">
+                            Borrar
+                        </a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(veterinarios)}">
+                    <td colspan="6" class="text-center py-4 text-muted">No hay veterinarios registrados.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>
