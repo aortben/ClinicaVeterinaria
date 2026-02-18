@@ -1,123 +1,117 @@
 package com.OrtegaAlvaro.ClinicaVeterinaria.controllers;
 
+import com.OrtegaAlvaro.ClinicaVeterinaria.dto.ClienteDTO;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Cliente;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.ClienteService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Controlador encargado de la gestión de la entidad Cliente.
- * Administra el registro de propietarios, actualizaciones de datos de contacto
- * y visualización del listado general.
+ * Controlador REST para la gestión de Clientes (Propietarios).
+ * Expone operaciones CRUD y búsqueda por apellidos a través de la API.
  */
-@Controller
-@RequestMapping("/clientes")
+@RestController
+@RequestMapping("/api/clientes")
 public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
 
     /**
-     * Muestra el listado paginado o filtrado de clientes.
-     * Incorpora lógica de búsqueda por coincidencia de apellidos.
-     * @param busqueda Cadena de texto para filtrar resultados (opcional).
-     * @param model Objeto para transferir datos a la vista.
-     * @return Vista del listado de clientes.
+     * Lista todos los clientes o filtra por apellidos si se proporciona el
+     * parámetro de búsqueda.
+     * GET /api/clientes
+     * GET /api/clientes?busqueda=García
      */
     @GetMapping
-    public String listarClientes(@RequestParam(required = false) String busqueda, Model model) {
-        List<Cliente> clientes;
+    public ResponseEntity<List<ClienteDTO>> listarClientes(
+            @RequestParam(required = false) String busqueda) {
 
+        List<Cliente> clientes;
         if (busqueda != null && !busqueda.isEmpty()) {
             clientes = clienteService.buscarPorApellidos(busqueda);
         } else {
             clientes = clienteService.findAll();
         }
 
-        model.addAttribute("clientes", clientes);
-        model.addAttribute("busqueda", busqueda);
-        return "entities-html/Cliente";
+        List<ClienteDTO> dtos = clientes.stream()
+                .map(this::toDTO)
+                .toList();
+
+        return ResponseEntity.ok(dtos);
     }
 
     /**
-     * Prepara el formulario para el alta de un nuevo cliente.
+     * Obtiene un cliente por su ID.
+     * GET /api/clientes/{id}
      */
-    @GetMapping("/nuevo")
-    public String formularioCrear(Model model) {
-        model.addAttribute("cliente", new Cliente());
-        model.addAttribute("titulo", "Nuevo Cliente");
-        return "forms-html/Cliente-form";
+    @GetMapping("/{id}")
+    public ResponseEntity<ClienteDTO> obtenerCliente(@PathVariable Long id) {
+        Cliente cliente = clienteService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("El cliente con ID " + id + " no existe."));
+
+        return ResponseEntity.ok(toDTO(cliente));
     }
 
     /**
-     * Prepara el formulario para la modificación de los datos de un cliente existente.
-     * @param id Identificador del cliente.
+     * Crea un nuevo cliente.
+     * POST /api/clientes (body JSON)
      */
-    @GetMapping("/editar/{id}")
-    public String formularioEditar(@PathVariable Long id, Model model, RedirectAttributes redirect) {
-        Optional<Cliente> clienteOpt = clienteService.findById(id);
-
-        if (clienteOpt.isEmpty()) {
-            redirect.addFlashAttribute("error", "El cliente solicitado no existe.");
-            return "redirect:/clientes";
-        }
-
-        model.addAttribute("cliente", clienteOpt.get());
-        model.addAttribute("titulo", "Editar Cliente");
-        return "forms-html/Cliente-form";
+    @PostMapping
+    public ResponseEntity<ClienteDTO> crearCliente(@Valid @RequestBody Cliente cliente) {
+        cliente.setId(null); // Asegurar creación, no actualización
+        Cliente guardado = clienteService.save(cliente);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(guardado));
     }
 
     /**
-     * Procesa la persistencia del cliente (Creación o Actualización).
-     * Maneja excepciones de integridad de datos (ej: DNI duplicado).
+     * Actualiza un cliente existente.
+     * PUT /api/clientes/{id} (body JSON)
      */
-    @PostMapping("/guardar")
-    public String guardarCliente(
-            @Valid @ModelAttribute("cliente") Cliente cliente,
-            BindingResult result,
-            Model model,
-            RedirectAttributes redirect
-    ) {
-        // 1. Validación de campos (JSR-303)
-        if (result.hasErrors()) {
-            model.addAttribute("titulo", cliente.getId() == null ? "Nuevo Cliente" : "Editar Cliente");
-            return "forms-html/Cliente-form";
-        }
+    @PutMapping("/{id}")
+    public ResponseEntity<ClienteDTO> actualizarCliente(
+            @PathVariable Long id,
+            @Valid @RequestBody Cliente cliente) {
 
-        // 2. Intento de persistencia
-        try {
-            clienteService.save(cliente);
-            redirect.addFlashAttribute("success", "Cliente guardado correctamente.");
-        } catch (Exception e) {
-            // Captura de error SQL (Unique Constraint) si el DNI ya existe
-            model.addAttribute("error", "Error al guardar: El DNI introducido ya pertenece a otro cliente.");
-            model.addAttribute("titulo", cliente.getId() == null ? "Nuevo Cliente" : "Editar Cliente");
-            return "forms-html/Cliente-form";
-        }
+        clienteService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("El cliente con ID " + id + " no existe."));
 
-        return "redirect:/clientes";
+        cliente.setId(id);
+        Cliente guardado = clienteService.save(cliente);
+        return ResponseEntity.ok(toDTO(guardado));
     }
 
     /**
-     * Elimina un cliente del sistema.
-     * Controla la integridad referencial para evitar borrar clientes con mascotas activas.
+     * Elimina un cliente por su ID.
+     * DELETE /api/clientes/{id}
      */
-    @GetMapping("/eliminar/{id}")
-    public String eliminarCliente(@PathVariable Long id, RedirectAttributes redirect) {
-        try {
-            clienteService.deleteById(id);
-            redirect.addFlashAttribute("success", "Cliente eliminado correctamente.");
-        } catch (Exception e) {
-            redirect.addFlashAttribute("error", "Operación denegada: El cliente tiene mascotas o historial asociado.");
-        }
-        return "redirect:/clientes";
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarCliente(@PathVariable Long id) {
+        clienteService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("El cliente con ID " + id + " no existe."));
+
+        clienteService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Conversión Entity → DTO ---
+
+    private ClienteDTO toDTO(Cliente c) {
+        ClienteDTO dto = new ClienteDTO();
+        dto.setId(c.getId());
+        dto.setNombre(c.getNombre());
+        dto.setApellidos(c.getApellidos());
+        dto.setDni(c.getDni());
+        dto.setTelefono(c.getTelefono());
+        dto.setTelefonoFormateado(c.getTelefonoFormateado());
+        dto.setDireccion(c.getDireccion());
+        dto.setEmail(c.getEmail());
+        return dto;
     }
 }

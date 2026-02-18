@@ -1,28 +1,32 @@
 package com.OrtegaAlvaro.ClinicaVeterinaria.controllers;
 
+import com.OrtegaAlvaro.ClinicaVeterinaria.dto.CitaVeterinariaDTO;
+import com.OrtegaAlvaro.ClinicaVeterinaria.dto.TratamientoDTO;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.CitaVeterinaria;
+import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Mascota;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Tratamiento;
+import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Veterinario;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.CitaVeterinariaService;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.MascotaService;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.VeterinarioService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * Controlador principal para la gestión de Citas Veterinarias.
- * Gestiona el flujo de trabajo completo: agenda, asignación de recursos (Mascota/Veterinario)
- * y persistencia de datos transaccionales.
+ * Controlador REST para la gestión de Citas Veterinarias.
+ * Gestiona el ciclo completo: creación, consulta detallada (con tratamientos),
+ * actualización y eliminación.
  */
-@Controller
-@RequestMapping("/citas")
+@RestController
+@RequestMapping("/api/citas")
 public class CitaVeterinariaController {
 
     @Autowired
@@ -35,148 +39,158 @@ public class CitaVeterinariaController {
     private VeterinarioService veterinarioService;
 
     /**
-     * Recupera y muestra el listado global de citas registradas en el sistema.
-     * @param model Modelo para pasar la lista a la vista.
-     * @return La vista de listado de entidades.
+     * Lista todas las citas registradas en el sistema.
+     * GET /api/citas
      */
     @GetMapping
-    public String listarCitas(Model model) {
-        model.addAttribute("citas", citaService.findAll());
-        return "entities-html/CitaVeterinaria";
+    public ResponseEntity<List<CitaVeterinariaDTO>> listarCitas() {
+        List<CitaVeterinariaDTO> dtos = citaService.findAll().stream()
+                .map(this::toDTO)
+                .toList();
+        return ResponseEntity.ok(dtos);
     }
 
     /**
-     * Muestra la vista de detalle extendido de una cita específica.
-     * Incluye información cruzada de Cliente, Mascota, Veterinario y desglose de Tratamientos.
-     * @param id Identificador de la cita.
-     * @return Vista de detalle o redirección si no existe.
+     * Obtiene el detalle completo de una cita (incluidos tratamientos).
+     * GET /api/citas/{id}
      */
-    @GetMapping("/detalle/{id}")
-    public String verDetalleCita(@PathVariable Long id, Model model, RedirectAttributes redirect) {
-        Optional<CitaVeterinaria> citaOpt = citaService.findById(id);
+    @GetMapping("/{id}")
+    public ResponseEntity<CitaVeterinariaDTO> obtenerCita(@PathVariable Long id) {
+        CitaVeterinaria cita = citaService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "La cita con ID " + id + " no existe."));
 
-        if (citaOpt.isEmpty()) {
-            redirect.addFlashAttribute("error", "La cita solicitada no existe en la base de datos.");
-            return "redirect:/citas";
-        }
-
-        model.addAttribute("cita", citaOpt.get());
-        model.addAttribute("titulo", "Detalle de la Cita");
-        return "details-html/CitaVeterinaria-details";
+        return ResponseEntity.ok(toDTO(cita));
     }
 
     /**
-     * Prepara el formulario para el registro de una nueva cita.
-     * Inicializa las listas necesarias para los selectores de Mascota y Veterinario.
+     * Crea una nueva cita veterinaria.
+     * El body JSON debe incluir mascotaId y veterinarioId.
+     * POST /api/citas
      */
-    @GetMapping("/nueva")
-    public String formularioCrear(Model model) {
-        CitaVeterinaria cita = new CitaVeterinaria();
-        // Inicializamos la lista para evitar errores en la vista si se intenta iterar
+    @PostMapping
+    public ResponseEntity<CitaVeterinariaDTO> crearCita(
+            @Valid @RequestBody CitaVeterinariaDTO citaDTO) {
+
+        CitaVeterinaria cita = toEntity(citaDTO);
+        cita.setId(null);
         cita.setTratamientos(new ArrayList<>());
 
-        model.addAttribute("cita", cita);
-        model.addAttribute("mascotas", mascotaService.findAll());
-        model.addAttribute("veterinarios", veterinarioService.findAll());
-        model.addAttribute("titulo", "Nueva Cita");
-
-        return "forms-html/CitaVeterinaria-form";
+        CitaVeterinaria guardada = citaService.save(cita);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(guardada));
     }
 
     /**
-     * Prepara el formulario para la edición de una cita existente.
-     * @param id Identificador de la cita a editar.
+     * Actualiza una cita existente.
+     * Preserva los tratamientos existentes (no se modifican desde este endpoint).
+     * PUT /api/citas/{id}
      */
-    @GetMapping("/editar/{id}")
-    public String formularioEditar(@PathVariable Long id, Model model, RedirectAttributes redirect) {
-        Optional<CitaVeterinaria> citaOpt = citaService.findById(id);
+    @PutMapping("/{id}")
+    public ResponseEntity<CitaVeterinariaDTO> actualizarCita(
+            @PathVariable Long id,
+            @Valid @RequestBody CitaVeterinariaDTO citaDTO) {
 
-        if (citaOpt.isEmpty()) {
-            redirect.addFlashAttribute("error", "No se puede editar: Cita no encontrada.");
-            return "redirect:/citas";
-        }
+        CitaVeterinaria citaDb = citaService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "La cita con ID " + id + " no existe."));
 
-        model.addAttribute("cita", citaOpt.get());
-        model.addAttribute("mascotas", mascotaService.findAll());
-        model.addAttribute("veterinarios", veterinarioService.findAll());
-        model.addAttribute("titulo", "Editar Cita");
+        // Resolver relaciones
+        Mascota mascota = mascotaService.findById(citaDTO.getMascotaId())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "La mascota con ID " + citaDTO.getMascotaId() + " no existe."));
+        Veterinario vet = veterinarioService.findById(citaDTO.getVeterinarioId())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "El veterinario con ID " + citaDTO.getVeterinarioId() + " no existe."));
 
-        return "forms-html/CitaVeterinaria-form";
+        // Actualizar campos sin sobrescribir tratamientos
+        citaDb.setFechaHora(citaDTO.getFechaHora());
+        citaDb.setMotivo(citaDTO.getMotivo());
+        citaDb.setDiagnostico(citaDTO.getDiagnostico());
+        citaDb.setEstado(citaDTO.getEstado());
+        citaDb.setMascota(mascota);
+        citaDb.setVeterinario(vet);
+
+        CitaVeterinaria guardada = citaService.save(citaDb);
+        return ResponseEntity.ok(toDTO(guardada));
     }
 
     /**
-     * Procesa la persistencia (Guardado o Actualización) de la cita.
-     * Implementa lógica específica para preservar la integridad de los tratamientos
-     * al actualizar una cita existente, evitando la pérdida de datos relacionales.
+     * Elimina una cita por su ID.
+     * DELETE /api/citas/{id}
      */
-    @PostMapping("/guardar")
-    public String guardarCita(
-            @Valid @ModelAttribute("cita") CitaVeterinaria citaForm,
-            BindingResult result,
-            Model model,
-            RedirectAttributes redirect
-    ) {
-        // 1. Validación de formulario
-        if (result.hasErrors()) {
-            model.addAttribute("mascotas", mascotaService.findAll());
-            model.addAttribute("veterinarios", veterinarioService.findAll());
-            model.addAttribute("titulo", citaForm.getId() == null ? "Nueva Cita" : "Editar Cita");
-            return "forms-html/CitaVeterinaria-form";
-        }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarCita(@PathVariable Long id) {
+        citaService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "La cita con ID " + id + " no existe."));
 
-        CitaVeterinaria citaGuardada;
-
-        // 2. Escenario de Actualización (UPDATE)
-        if (citaForm.getId() != null) {
-            Optional<CitaVeterinaria> citaDbOpt = citaService.findById(citaForm.getId());
-
-            if (citaDbOpt.isPresent()) {
-                CitaVeterinaria citaDb = citaDbOpt.get();
-
-                // Mapeo manual de campos para no sobrescribir la lista de tratamientos con null
-                citaDb.setFechaHora(citaForm.getFechaHora());
-                citaDb.setEstado(citaForm.getEstado());
-                citaDb.setMotivo(citaForm.getMotivo());
-                citaDb.setDiagnostico(citaForm.getDiagnostico());
-                citaDb.setMascota(citaForm.getMascota());
-                citaDb.setVeterinario(citaForm.getVeterinario());
-
-                // Persistencia manteniendo tratamientos previos
-                citaGuardada = citaService.save(citaDb);
-
-                redirect.addFlashAttribute("success", "Cita actualizada correctamente.");
-                // Retorno al detalle para verificar cambios
-                return "redirect:/citas/detalle/" + citaGuardada.getId();
-            }
-        }
-
-        // 3. Escenario de Creación (CREATE)
-        // Vinculación bidireccional preventiva si vinieran tratamientos en el form
-        if (citaForm.getTratamientos() != null) {
-            for (Tratamiento t : citaForm.getTratamientos()) {
-                t.setCita(citaForm);
-            }
-        }
-
-        citaGuardada = citaService.save(citaForm);
-        redirect.addFlashAttribute("success", "Cita creada. Puede añadir tratamientos a continuación.");
-
-        // Redirección a tratamientos tras crear una cita para agilizar el flujo.
-        return "redirect:/tratamientos/cita/" + citaGuardada.getId();
+        citaService.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Elimina una cita del sistema.
-     * @param id Identificador de la cita.
-     */
-    @GetMapping("/eliminar/{id}")
-    public String eliminarCita(@PathVariable Long id, RedirectAttributes redirect) {
-        try {
-            citaService.deleteById(id);
-            redirect.addFlashAttribute("success", "La cita ha sido eliminada correctamente.");
-        } catch (Exception e) {
-            redirect.addFlashAttribute("error", "Error al eliminar: Es posible que existan dependencias activas.");
+    // --- Conversiones Entity ↔ DTO ---
+
+    private CitaVeterinariaDTO toDTO(CitaVeterinaria c) {
+        CitaVeterinariaDTO dto = new CitaVeterinariaDTO();
+        dto.setId(c.getId());
+        dto.setFechaHora(c.getFechaHora());
+        dto.setMotivo(c.getMotivo());
+        dto.setDiagnostico(c.getDiagnostico());
+        dto.setEstado(c.getEstado());
+        dto.setCosteTotal(c.getCosteTotal());
+
+        if (c.getMascota() != null) {
+            dto.setMascotaId(c.getMascota().getId());
+            dto.setMascotaNombre(c.getNombreMascotaStr());
         }
-        return "redirect:/citas";
+        if (c.getVeterinario() != null) {
+            dto.setVeterinarioId(c.getVeterinario().getId());
+            dto.setVeterinarioNombre(c.getNombreVeterinarioStr());
+        }
+
+        if (c.getTratamientos() != null) {
+            dto.setTratamientos(c.getTratamientos().stream()
+                    .map(this::tratamientoToDTO)
+                    .toList());
+        } else {
+            dto.setTratamientos(Collections.emptyList());
+        }
+
+        return dto;
+    }
+
+    private TratamientoDTO tratamientoToDTO(Tratamiento t) {
+        TratamientoDTO dto = new TratamientoDTO();
+        dto.setId(t.getId());
+        dto.setDescripcion(t.getDescripcion());
+        dto.setMedicamento(t.getMedicamento());
+        dto.setPrecio(t.getPrecio());
+        dto.setObservaciones(t.getObservaciones());
+        dto.setCitaId(t.getCita() != null ? t.getCita().getId() : null);
+        return dto;
+    }
+
+    private CitaVeterinaria toEntity(CitaVeterinariaDTO dto) {
+        CitaVeterinaria cita = new CitaVeterinaria();
+        cita.setFechaHora(dto.getFechaHora());
+        cita.setMotivo(dto.getMotivo());
+        cita.setDiagnostico(dto.getDiagnostico());
+        cita.setEstado(dto.getEstado());
+
+        if (dto.getMascotaId() != null) {
+            Mascota mascota = mascotaService.findById(dto.getMascotaId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "La mascota con ID " + dto.getMascotaId() + " no existe."));
+            cita.setMascota(mascota);
+        }
+
+        if (dto.getVeterinarioId() != null) {
+            Veterinario vet = veterinarioService.findById(dto.getVeterinarioId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "El veterinario con ID " + dto.getVeterinarioId() + " no existe."));
+            cita.setVeterinario(vet);
+        }
+
+        return cita;
     }
 }

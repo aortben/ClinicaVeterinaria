@@ -1,27 +1,25 @@
 package com.OrtegaAlvaro.ClinicaVeterinaria.controllers;
 
+import com.OrtegaAlvaro.ClinicaVeterinaria.dto.TratamientoDTO;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.CitaVeterinaria;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Tratamiento;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.CitaVeterinariaService;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.TratamientoService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
- * Controlador encargado de la gestión de Tratamientos y Servicios clínicos.
- * Esta entidad actúa como detalle económico o línea de servicio asociada a una Cita Veterinaria.
- * Gestiona el flujo de navegación contextual, permitiendo operaciones desde el listado general
- * o desde la ficha de edición de una cita (Maestro-Detalle).
+ * Controlador REST para la gestión de Tratamientos y Servicios clínicos.
+ * Expone operaciones CRUD y filtrado por cita a través de la API.
  */
-@Controller
-@RequestMapping("/tratamientos")
+@RestController
+@RequestMapping("/api/tratamientos")
 public class TratamientoController {
 
     @Autowired
@@ -31,131 +29,120 @@ public class TratamientoController {
     private CitaVeterinariaService citaService;
 
     /**
-     * Muestra el historial global de todos los tratamientos realizados en la clínica.
-     * Útil para auditoría y revisión de facturación general.
+     * Lista todos los tratamientos del sistema.
+     * GET /api/tratamientos
      */
     @GetMapping
-    public String listarGlobal(Model model) {
-        // Reutiliza la vista 'entities-html/Tratamiento' adaptada para mostrarse sin contexto de cita
-        model.addAttribute("tratamientos", tratamientoService.findAll());
-        return "entities-html/Tratamiento";
+    public ResponseEntity<List<TratamientoDTO>> listarGlobal() {
+        List<TratamientoDTO> dtos = tratamientoService.findAll().stream()
+                .map(this::toDTO)
+                .toList();
+        return ResponseEntity.ok(dtos);
     }
 
     /**
-     * Muestra el listado de tratamientos filtrados para una cita específica.
-     * @param citaId Identificador de la cita padre.
+     * Lista los tratamientos de una cita específica.
+     * GET /api/tratamientos/cita/{citaId}
      */
     @GetMapping("/cita/{citaId}")
-    public String listarPorCita(@PathVariable Long citaId, Model model, RedirectAttributes redirect) {
-        Optional<CitaVeterinaria> citaOpt = citaService.findById(citaId);
+    public ResponseEntity<List<TratamientoDTO>> listarPorCita(@PathVariable Long citaId) {
+        citaService.findById(citaId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "La cita con ID " + citaId + " no existe."));
 
-        if (citaOpt.isEmpty()) {
-            redirect.addFlashAttribute("error", "No se puede cargar el detalle: La cita asociada no existe.");
-            return "redirect:/citas";
-        }
-
-        // Se pasa la cita al modelo para mostrar la cabecera contextual en la vista
-        model.addAttribute("cita", citaOpt.get());
-        model.addAttribute("tratamientos", tratamientoService.findByCitaId(citaId));
-        return "entities-html/Tratamiento";
+        List<TratamientoDTO> dtos = tratamientoService.findByCitaId(citaId).stream()
+                .map(this::toDTO)
+                .toList();
+        return ResponseEntity.ok(dtos);
     }
 
     /**
-     * Prepara el formulario para añadir un nuevo tratamiento a una cita existente.
-     * @param citaId ID de la cita a la que se vinculará el servicio.
+     * Obtiene un tratamiento por su ID.
+     * GET /api/tratamientos/{id}
      */
-    @GetMapping("/nuevo/{citaId}")
-    public String formularioCrear(@PathVariable Long citaId, Model model, RedirectAttributes redirect) {
-        Optional<CitaVeterinaria> citaOpt = citaService.findById(citaId);
+    @GetMapping("/{id}")
+    public ResponseEntity<TratamientoDTO> obtenerTratamiento(@PathVariable Long id) {
+        Tratamiento trat = tratamientoService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "El tratamiento con ID " + id + " no existe."));
 
-        if (citaOpt.isEmpty()) {
-            redirect.addFlashAttribute("error", "Cita no encontrada.");
-            return "redirect:/citas";
-        }
-
-        Tratamiento tratamiento = new Tratamiento();
-        tratamiento.setCita(citaOpt.get()); // Vinculación automática (Pre-asignación)
-
-        model.addAttribute("tratamiento", tratamiento);
-        model.addAttribute("citaId", citaId);
-        model.addAttribute("titulo", "Añadir Tratamiento / Servicio");
-
-        return "forms-html/Tratamiento-form";
+        return ResponseEntity.ok(toDTO(trat));
     }
 
     /**
-     * Prepara el formulario para la edición de un tratamiento existente.
+     * Crea un nuevo tratamiento vinculado a una cita.
+     * El body JSON debe incluir citaId.
+     * POST /api/tratamientos
      */
-    @GetMapping("/editar/{id}")
-    public String formularioEditar(@PathVariable Long id, Model model, RedirectAttributes redirect) {
-        return tratamientoService.findById(id).map(trat -> {
-            model.addAttribute("tratamiento", trat);
-            model.addAttribute("citaId", trat.getCita().getId());
-            model.addAttribute("titulo", "Editar Tratamiento");
-            return "forms-html/Tratamiento-form";
-        }).orElseGet(() -> {
-            redirect.addFlashAttribute("error", "El tratamiento solicitado no existe.");
-            return "redirect:/citas";
-        });
+    @PostMapping
+    public ResponseEntity<TratamientoDTO> crearTratamiento(
+            @Valid @RequestBody TratamientoDTO tratamientoDTO) {
+
+        Tratamiento trat = toEntity(tratamientoDTO);
+        trat.setId(null);
+        Tratamiento guardado = tratamientoService.save(trat);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(guardado));
     }
 
     /**
-     * Procesa la persistencia de un tratamiento.
-     * Soporta redirección dinámica basada en el origen de la petición para mejorar la UX.
-     *
-     * @param origen Parámetro opcional que indica desde dónde se realizó la acción
-     * ('lista' o 'editar_cita') para retornar a la vista correcta.
+     * Actualiza un tratamiento existente.
+     * PUT /api/tratamientos/{id}
      */
-    @PostMapping("/guardar")
-    public String guardarTratamiento(
-            @Valid @ModelAttribute Tratamiento tratamiento,
-            BindingResult result,
-            Model model,
-            @RequestParam(required = false, defaultValue = "lista") String origen
-    ) {
-        Long citaId = tratamiento.getCita().getId();
-
-        if (result.hasErrors()) {
-            model.addAttribute("titulo", "Editar Tratamiento");
-            model.addAttribute("citaId", citaId);
-            return "forms-html/Tratamiento-form";
-        }
-
-        tratamientoService.save(tratamiento);
-
-        // Lógica de navegación: Si el usuario venía de editar la cita completa, volvemos allí.
-        if ("editar_cita".equals(origen)) {
-            return "redirect:/citas/editar/" + citaId;
-        }
-
-        // Por defecto, volvemos al listado de tratamientos de esa cita
-        return "redirect:/tratamientos/cita/" + citaId;
-    }
-
-    /**
-     * Elimina un tratamiento del sistema.
-     * Mantiene la lógica de redirección dinámica según el origen.
-     */
-    @GetMapping("/eliminar/{id}")
-    public String eliminarTratamiento(
+    @PutMapping("/{id}")
+    public ResponseEntity<TratamientoDTO> actualizarTratamiento(
             @PathVariable Long id,
-            @RequestParam(required = false, defaultValue = "lista") String origen,
-            RedirectAttributes redirect
-    ) {
-        Optional<Tratamiento> tratOpt = tratamientoService.findById(id);
+            @Valid @RequestBody TratamientoDTO tratamientoDTO) {
 
-        if (tratOpt.isPresent()) {
-            Long citaId = tratOpt.get().getCita().getId();
-            tratamientoService.deleteById(id);
-            redirect.addFlashAttribute("success", "Tratamiento eliminado correctamente.");
+        tratamientoService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "El tratamiento con ID " + id + " no existe."));
 
-            // Retorno al formulario maestro de la cita si la petición vino de allí
-            if ("editar_cita".equals(origen)) {
-                return "redirect:/citas/editar/" + citaId;
-            }
-            return "redirect:/tratamientos/cita/" + citaId;
+        Tratamiento trat = toEntity(tratamientoDTO);
+        trat.setId(id);
+        Tratamiento guardado = tratamientoService.save(trat);
+        return ResponseEntity.ok(toDTO(guardado));
+    }
+
+    /**
+     * Elimina un tratamiento por su ID.
+     * DELETE /api/tratamientos/{id}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarTratamiento(@PathVariable Long id) {
+        tratamientoService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "El tratamiento con ID " + id + " no existe."));
+
+        tratamientoService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Conversiones Entity ↔ DTO ---
+
+    private TratamientoDTO toDTO(Tratamiento t) {
+        TratamientoDTO dto = new TratamientoDTO();
+        dto.setId(t.getId());
+        dto.setDescripcion(t.getDescripcion());
+        dto.setMedicamento(t.getMedicamento());
+        dto.setPrecio(t.getPrecio());
+        dto.setObservaciones(t.getObservaciones());
+        dto.setCitaId(t.getCita() != null ? t.getCita().getId() : null);
+        return dto;
+    }
+
+    private Tratamiento toEntity(TratamientoDTO dto) {
+        Tratamiento trat = new Tratamiento();
+        trat.setDescripcion(dto.getDescripcion());
+        trat.setMedicamento(dto.getMedicamento());
+        trat.setPrecio(dto.getPrecio());
+        trat.setObservaciones(dto.getObservaciones());
+
+        if (dto.getCitaId() != null) {
+            CitaVeterinaria cita = citaService.findById(dto.getCitaId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "La cita con ID " + dto.getCitaId() + " no existe."));
+            trat.setCita(cita);
         }
-
-        return "redirect:/citas";
+        return trat;
     }
 }

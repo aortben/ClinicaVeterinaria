@@ -1,25 +1,25 @@
 package com.OrtegaAlvaro.ClinicaVeterinaria.controllers;
 
+import com.OrtegaAlvaro.ClinicaVeterinaria.dto.MascotaDTO;
+import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Cliente;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Mascota;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.ClienteService;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.MascotaService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
- * Controlador encargado de la gestión de la entidad Mascota.
- * Administra el registro de pacientes (animales), su vinculación con los propietarios (Clientes)
- * y la actualización de sus datos clínicos básicos.
+ * Controlador REST para la gestión de Mascotas (Pacientes).
+ * Expone operaciones CRUD y vinculación con propietarios a través de la API.
  */
-@Controller
-@RequestMapping("/mascotas")
+@RestController
+@RequestMapping("/api/mascotas")
 public class MascotaController {
 
     @Autowired
@@ -29,85 +29,105 @@ public class MascotaController {
     private ClienteService clienteService;
 
     /**
-     * Muestra el listado completo de mascotas registradas en el sistema.
-     * Incluye la navegación hacia la ficha del propietario asociado.
-     * @param model Objeto para transferir la lista a la vista.
-     * @return La vista de listado de mascotas.
+     * Lista todas las mascotas registradas.
+     * GET /api/mascotas
      */
     @GetMapping
-    public String listarMascotas(Model model) {
-        model.addAttribute("mascotas", mascotaService.findAll());
-        return "entities-html/Mascota";
+    public ResponseEntity<List<MascotaDTO>> listarMascotas() {
+        List<MascotaDTO> dtos = mascotaService.findAll().stream()
+                .map(this::toDTO)
+                .toList();
+        return ResponseEntity.ok(dtos);
     }
 
     /**
-     * Prepara el formulario para el registro de una nueva mascota.
-     * Carga la lista de clientes disponibles para poblar el selector de dueño.
+     * Obtiene una mascota por su ID.
+     * GET /api/mascotas/{id}
      */
-    @GetMapping("/nuevo")
-    public String formularioCrear(Model model) {
-        model.addAttribute("mascota", new Mascota());
-        // Necesario para el desplegable <select> de elección de dueño
-        model.addAttribute("clientes", clienteService.findAll());
-        model.addAttribute("titulo", "Nueva Mascota");
-        return "forms-html/Mascota-form";
+    @GetMapping("/{id}")
+    public ResponseEntity<MascotaDTO> obtenerMascota(@PathVariable Long id) {
+        Mascota mascota = mascotaService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("La mascota con ID " + id + " no existe."));
+
+        return ResponseEntity.ok(toDTO(mascota));
     }
 
     /**
-     * Prepara el formulario para la edición de una mascota existente.
-     * @param id Identificador de la mascota.
+     * Crea una nueva mascota.
+     * El body JSON debe incluir un campo "clienteId" para vincularla a su
+     * propietario.
+     * POST /api/mascotas (body JSON con clienteId)
      */
-    @GetMapping("/editar/{id}")
-    public String formularioEditar(@PathVariable Long id, Model model, RedirectAttributes redirect) {
-        Optional<Mascota> mascotaOpt = mascotaService.findById(id);
+    @PostMapping
+    public ResponseEntity<MascotaDTO> crearMascota(@Valid @RequestBody MascotaDTO mascotaDTO) {
+        Mascota mascota = toEntity(mascotaDTO);
+        mascota.setId(null);
+        Mascota guardada = mascotaService.save(mascota);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(guardada));
+    }
 
-        if (mascotaOpt.isEmpty()) {
-            redirect.addFlashAttribute("error", "La mascota solicitada no existe.");
-            return "redirect:/mascotas";
+    /**
+     * Actualiza una mascota existente.
+     * PUT /api/mascotas/{id} (body JSON con clienteId)
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<MascotaDTO> actualizarMascota(
+            @PathVariable Long id,
+            @Valid @RequestBody MascotaDTO mascotaDTO) {
+
+        mascotaService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("La mascota con ID " + id + " no existe."));
+
+        Mascota mascota = toEntity(mascotaDTO);
+        mascota.setId(id);
+        Mascota guardada = mascotaService.save(mascota);
+        return ResponseEntity.ok(toDTO(guardada));
+    }
+
+    /**
+     * Elimina una mascota por su ID.
+     * DELETE /api/mascotas/{id}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarMascota(@PathVariable Long id) {
+        mascotaService.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("La mascota con ID " + id + " no existe."));
+
+        mascotaService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- Conversiones Entity ↔ DTO ---
+
+    private MascotaDTO toDTO(Mascota m) {
+        MascotaDTO dto = new MascotaDTO();
+        dto.setId(m.getId());
+        dto.setNombre(m.getNombre());
+        dto.setEspecie(m.getEspecie());
+        dto.setRaza(m.getRaza());
+        dto.setFechaNacimiento(m.getFechaNacimiento());
+        dto.setPeso(m.getPeso());
+        if (m.getCliente() != null) {
+            dto.setClienteId(m.getCliente().getId());
+            dto.setClienteNombre(m.getCliente().getNombre() + " " + m.getCliente().getApellidos());
         }
-
-        model.addAttribute("mascota", mascotaOpt.get());
-        model.addAttribute("clientes", clienteService.findAll());
-        model.addAttribute("titulo", "Editar Mascota");
-        return "forms-html/Mascota-form";
+        return dto;
     }
 
-    /**
-     * Procesa la persistencia de la mascota.
-     * En caso de error de validación, recarga la lista de clientes para evitar
-     * que el formulario se renderice incorrectamente.
-     */
-    @PostMapping("/guardar")
-    public String guardarMascota(
-            @Valid @ModelAttribute Mascota mascota,
-            BindingResult result,
-            Model model,
-            RedirectAttributes redirect
-    ) {
-        if (result.hasErrors()) {
-            // Recarga crítica: Si no enviamos los clientes de nuevo, el <select> aparecerá vacío
-            model.addAttribute("clientes", clienteService.findAll());
-            model.addAttribute("titulo", mascota.getId() == null ? "Nueva Mascota" : "Editar Mascota");
-            return "forms-html/Mascota-form";
-        }
+    private Mascota toEntity(MascotaDTO dto) {
+        Mascota mascota = new Mascota();
+        mascota.setNombre(dto.getNombre());
+        mascota.setEspecie(dto.getEspecie());
+        mascota.setRaza(dto.getRaza());
+        mascota.setFechaNacimiento(dto.getFechaNacimiento());
+        mascota.setPeso(dto.getPeso());
 
-        mascotaService.save(mascota);
-        redirect.addFlashAttribute("success", "Mascota guardada correctamente.");
-        return "redirect:/mascotas";
-    }
-
-    /**
-     * Elimina una mascota del sistema.
-     * Controla excepciones de integridad referencial (ej: si la mascota tiene historial de citas).
-     */
-    @GetMapping("/eliminar/{id}")
-    public String eliminarMascota(@PathVariable Long id, RedirectAttributes redirect) {
-        try {
-            mascotaService.deleteById(id);
-            redirect.addFlashAttribute("success", "Mascota eliminada correctamente.");
-        } catch (Exception e) {
-            redirect.addFlashAttribute("error", "Operación denegada: No se puede eliminar una mascota con historial de citas activo.");
+        if (dto.getClienteId() != null) {
+            Cliente cliente = clienteService.findById(dto.getClienteId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "El cliente con ID " + dto.getClienteId() + " no existe."));
+            mascota.setCliente(cliente);
         }
-        return "redirect:/mascotas";
+        return mascota;
     }
 }

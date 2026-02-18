@@ -73,6 +73,14 @@ public class Cliente {
         mascota.setCliente(this);
     }
 
+    /**
+     * Devuelve el número de teléfono del cliente en un formato estandarizado.
+     * El método elimina los espacios internos, asegura que el valor incluya el
+     * prefijo internacional "+34" y lo presenta siempre en el formato:
+     * "+34 NNNNNNNNN".
+     *
+     * @return El número de teléfono formateado de manera uniforme.
+     */
     public String getTelefonoFormateado() {
         if (telefono == null) return "";
 
