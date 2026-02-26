@@ -36,16 +36,12 @@ public class Cliente {
 
     @Column(unique = true, nullable = false, length = 9)
     @NotBlank(message = "El DNI es obligatorio")
-    @Pattern(
-            regexp = "^[0-9]{8}[A-HJ-NP-TV-Z]$",
-            message = "Formato de DNI inválido. Deben ser 8 números y una letra válida (no se permiten I, O, U, Ñ)")
+    @Pattern(regexp = "^[0-9]{8}[A-HJ-NP-TV-Z]$", message = "Formato de DNI inválido. Deben ser 8 números y una letra válida (no se permiten I, O, U, Ñ)")
     private String dni;
 
-    @Column(length = 15)
+    @Column(length = 20)
     @NotBlank(message = "El teléfono es obligatorio")
-    @Pattern(
-            regexp = "^\\+34 ?[6789](?: ?[0-9]){8}$",
-            message = "Debe introducir un teléfono válido con prefijo +34 (con o sin espacios) y debe empezar con 6,7,8 o 9")
+    @Pattern(regexp = "^\\+34 ?[6789](?: ?[0-9]){8}$", message = "Debe introducir un teléfono válido con prefijo +34 (con o sin espacios) y debe empezar con 6,7,8 o 9")
     private String telefono;
 
     private String direccion;
@@ -66,6 +62,7 @@ public class Cliente {
     /**
      * Método helper para gestionar la relación bidireccional.
      * Asocia la mascota a este cliente y la añade a la lista interna.
+     * 
      * @param mascota La entidad Mascota a vincular.
      */
     public void addMascota(Mascota mascota) {
@@ -82,7 +79,8 @@ public class Cliente {
      * @return El número de teléfono formateado de manera uniforme.
      */
     public String getTelefonoFormateado() {
-        if (telefono == null) return "";
+        if (telefono == null)
+            return "";
 
         // Eliminar todos los espacios
         String limpio = telefono.replaceAll(" ", "");

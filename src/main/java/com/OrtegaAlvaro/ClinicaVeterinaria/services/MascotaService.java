@@ -4,6 +4,8 @@ import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Mascota;
 import com.OrtegaAlvaro.ClinicaVeterinaria.repositories.MascotaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,14 +23,23 @@ public class MascotaService {
 
     /**
      * Recupera el censo completo de mascotas registradas en el sistema.
+     * 
      * @return Lista de todos los animales.
      */
     public List<Mascota> findAll() {
         return mascotaRepository.findAll();
     }
 
+    public Page<Mascota> findAll(Pageable pageable, String search) {
+        if (search != null && !search.trim().isEmpty()) {
+            return mascotaRepository.findBySearch(search, pageable);
+        }
+        return mascotaRepository.findAll(pageable);
+    }
+
     /**
      * Busca una mascota específica por su identificador único.
+     * 
      * @param id Identificador de la mascota.
      * @return Contenedor Optional con la mascota si existe.
      */
@@ -38,7 +49,9 @@ public class MascotaService {
 
     /**
      * Obtiene la lista de mascotas pertenecientes a un cliente específico.
-     * Esencial para la vista de detalle del cliente, donde se muestran sus animales.
+     * Esencial para la vista de detalle del cliente, donde se muestran sus
+     * animales.
+     * 
      * @param clienteId Identificador del dueño.
      */
     public List<Mascota> findByClienteId(Long clienteId) {
@@ -47,6 +60,7 @@ public class MascotaService {
 
     /**
      * Persiste (Crea o Actualiza) los datos clínicos de una mascota.
+     * 
      * @param mascota Entidad con los datos a guardar.
      * @return La mascota persistida.
      */
@@ -56,6 +70,7 @@ public class MascotaService {
 
     /**
      * Elimina una mascota del sistema.
+     * 
      * @param id Identificador de la mascota a dar de baja.
      */
     public void deleteById(Long id) {

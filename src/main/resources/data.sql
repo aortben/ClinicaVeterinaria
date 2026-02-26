@@ -41,3 +41,7 @@ INSERT INTO tratamiento (descripcion, medicamento, precio, observaciones, cita_i
 ('Pomada Tópica Ocular', 'Terramicina', 14.00, 'Aplicar 3 veces al día.', 3),
 ('Recorte de Incisivos', NULL, 25.00, 'Se pautó revisión cada 4 meses.', 4),
 ('Sutura Menor', NULL, 40.00, 'Retirar puntos en 7 días.', 5);
+
+INSERT INTO usuario (email, password, rol, cliente_id, veterinario_id) VALUES
+('vet@test.com', '$2y$10$wO3tnt2j8BntEhm6Y.HwHOHn8HXYs0/i1FwN.UjG/UvB4Z8mZ284q', 'VETERINARIO', NULL, 1),
+('cliente@test.com', '$2y$10$wO3tnt2j8BntEhm6Y.HwHOHn8HXYs0/i1FwN.UjG/UvB4Z8mZ284q', 'CLIENTE', 1, NULL);

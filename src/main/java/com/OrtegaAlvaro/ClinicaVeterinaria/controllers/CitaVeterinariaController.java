@@ -4,8 +4,12 @@ import com.OrtegaAlvaro.ClinicaVeterinaria.dto.CitaVeterinariaDTO;
 import com.OrtegaAlvaro.ClinicaVeterinaria.dto.TratamientoDTO;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.CitaVeterinaria;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Mascota;
+import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Rol;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Tratamiento;
+import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Usuario;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Veterinario;
+import com.OrtegaAlvaro.ClinicaVeterinaria.repositories.CitaVeterinariaRepository;
+import com.OrtegaAlvaro.ClinicaVeterinaria.repositories.UsuarioRepository;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.CitaVeterinariaService;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.MascotaService;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.VeterinarioService;
@@ -14,7 +18,14 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,16 +49,37 @@ public class CitaVeterinariaController {
     @Autowired
     private VeterinarioService veterinarioService;
 
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private CitaVeterinariaRepository citaRepository;
+
     /**
      * Lista todas las citas registradas en el sistema.
      * GET /api/citas
      */
     @GetMapping
-    public ResponseEntity<List<CitaVeterinariaDTO>> listarCitas() {
-        List<CitaVeterinariaDTO> dtos = citaService.findAll().stream()
-                .map(this::toDTO)
-                .toList();
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<?> listarCitas(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sort,
+            @RequestParam(required = false) String search,
+            Authentication authentication) {
+
+        Usuario usuario = usuarioRepository.findByEmail(authentication.getName()).orElseThrow();
+
+        // CLIENTE solo ve citas de sus mascotas
+        if (usuario.getRol() == Rol.CLIENTE && usuario.getCliente() != null) {
+            List<CitaVeterinaria> misCitas = citaRepository.findByMascotaClienteId(usuario.getCliente().getId());
+            List<CitaVeterinariaDTO> dtos = misCitas.stream().map(this::toDTO).toList();
+            return ResponseEntity.ok(new PageImpl<>(dtos));
+        }
+
+        // VETERINARIO ve todas
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sort));
+        Page<CitaVeterinaria> citas = citaService.findAll(pageable, search);
+        return ResponseEntity.ok(citas.map(this::toDTO));
     }
 
     /**
@@ -55,16 +87,25 @@ public class CitaVeterinariaController {
      * GET /api/citas/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<CitaVeterinariaDTO> obtenerCita(@PathVariable Long id) {
+    public ResponseEntity<?> obtenerCita(@PathVariable Long id, Authentication authentication) {
+        Usuario usuario = usuarioRepository.findByEmail(authentication.getName()).orElseThrow();
         CitaVeterinaria cita = citaService.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "La cita con ID " + id + " no existe."));
+                .orElseThrow(() -> new EntityNotFoundException("La cita con ID " + id + " no existe."));
+
+        // CLIENTE solo puede ver citas de sus mascotas
+        if (usuario.getRol() == Rol.CLIENTE) {
+            if (usuario.getCliente() == null
+                    || !cita.getMascota().getCliente().getId().equals(usuario.getCliente().getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(java.util.Map.of("error", "No tienes permiso para ver esta cita"));
+            }
+        }
 
         return ResponseEntity.ok(toDTO(cita));
     }
 
     /**
-     * Crea una nueva cita veterinaria.
+     * Crea una nueva cita veterinaria. Solo VETERINARIO.
      * El body JSON debe incluir mascotaId y veterinarioId.
      * POST /api/citas
      */
@@ -88,27 +129,32 @@ public class CitaVeterinariaController {
     @PutMapping("/{id}")
     public ResponseEntity<CitaVeterinariaDTO> actualizarCita(
             @PathVariable Long id,
-            @Valid @RequestBody CitaVeterinariaDTO citaDTO) {
+            @RequestBody CitaVeterinariaDTO citaDTO) {
 
         CitaVeterinaria citaDb = citaService.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "La cita con ID " + id + " no existe."));
 
-        // Resolver relaciones
-        Mascota mascota = mascotaService.findById(citaDTO.getMascotaId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "La mascota con ID " + citaDTO.getMascotaId() + " no existe."));
-        Veterinario vet = veterinarioService.findById(citaDTO.getVeterinarioId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "El veterinario con ID " + citaDTO.getVeterinarioId() + " no existe."));
-
-        // Actualizar campos sin sobrescribir tratamientos
-        citaDb.setFechaHora(citaDTO.getFechaHora());
-        citaDb.setMotivo(citaDTO.getMotivo());
-        citaDb.setDiagnostico(citaDTO.getDiagnostico());
-        citaDb.setEstado(citaDTO.getEstado());
-        citaDb.setMascota(mascota);
-        citaDb.setVeterinario(vet);
+        if (citaDTO.getFechaHora() != null)
+            citaDb.setFechaHora(citaDTO.getFechaHora());
+        if (citaDTO.getMotivo() != null)
+            citaDb.setMotivo(citaDTO.getMotivo());
+        if (citaDTO.getDiagnostico() != null)
+            citaDb.setDiagnostico(citaDTO.getDiagnostico());
+        if (citaDTO.getEstado() != null)
+            citaDb.setEstado(citaDTO.getEstado());
+        if (citaDTO.getMascotaId() != null) {
+            Mascota mascota = mascotaService.findById(citaDTO.getMascotaId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "La mascota con ID " + citaDTO.getMascotaId() + " no existe."));
+            citaDb.setMascota(mascota);
+        }
+        if (citaDTO.getVeterinarioId() != null) {
+            Veterinario vet = veterinarioService.findById(citaDTO.getVeterinarioId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "El veterinario con ID " + citaDTO.getVeterinarioId() + " no existe."));
+            citaDb.setVeterinario(vet);
+        }
 
         CitaVeterinaria guardada = citaService.save(citaDb);
         return ResponseEntity.ok(toDTO(guardada));

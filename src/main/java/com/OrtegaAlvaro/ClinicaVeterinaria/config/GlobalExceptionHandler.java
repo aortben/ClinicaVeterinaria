@@ -1,9 +1,12 @@
 package com.OrtegaAlvaro.ClinicaVeterinaria.config;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -64,6 +67,35 @@ public class GlobalExceptionHandler {
         body.put("mensaje", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    /**
+     * Errores de transacción (normalmente envuelven ConstraintViolationException) →
+     * 400 Bad Request
+     */
+    @ExceptionHandler(TransactionSystemException.class)
+    public ResponseEntity<Map<String, Object>> handleTransaction(TransactionSystemException ex) {
+        Throwable cause = ex.getRootCause();
+        if (cause instanceof ConstraintViolationException cve) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("timestamp", LocalDateTime.now());
+            body.put("status", 400);
+            body.put("error", "Error de validación en entidad");
+
+            Map<String, String> errores = new HashMap<>();
+            for (ConstraintViolation<?> v : cve.getConstraintViolations()) {
+                errores.put(v.getPropertyPath().toString(), v.getMessage());
+            }
+            body.put("errores", errores);
+            return ResponseEntity.badRequest().body(body);
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", 500);
+        body.put("error", "Error de transacción");
+        body.put("mensaje", cause != null ? cause.getMessage() : ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
     /**

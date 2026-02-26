@@ -22,6 +22,7 @@ public class MascotaDTO {
     private String raza;
     private LocalDate fechaNacimiento;
     private Double peso;
+    private String imagenUrl;
     private Long clienteId;
     private String clienteNombre;
 }

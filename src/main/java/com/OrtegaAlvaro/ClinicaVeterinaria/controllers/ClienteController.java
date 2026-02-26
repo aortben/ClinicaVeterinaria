@@ -2,13 +2,23 @@ package com.OrtegaAlvaro.ClinicaVeterinaria.controllers;
 
 import com.OrtegaAlvaro.ClinicaVeterinaria.dto.ClienteDTO;
 import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Cliente;
+import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Rol;
+import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Usuario;
+import com.OrtegaAlvaro.ClinicaVeterinaria.repositories.UsuarioRepository;
 import com.OrtegaAlvaro.ClinicaVeterinaria.services.ClienteService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -23,6 +33,9 @@ public class ClienteController {
     @Autowired
     private ClienteService clienteService;
 
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     /**
      * Lista todos los clientes o filtra por apellidos si se proporciona el
      * parámetro de búsqueda.
@@ -30,21 +43,27 @@ public class ClienteController {
      * GET /api/clientes?busqueda=García
      */
     @GetMapping
-    public ResponseEntity<List<ClienteDTO>> listarClientes(
-            @RequestParam(required = false) String busqueda) {
+    public ResponseEntity<?> listarClientes(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sort,
+            @RequestParam(required = false) String search,
+            Authentication authentication) {
 
-        List<Cliente> clientes;
-        if (busqueda != null && !busqueda.isEmpty()) {
-            clientes = clienteService.buscarPorApellidos(busqueda);
-        } else {
-            clientes = clienteService.findAll();
+        Usuario usuario = usuarioRepository.findByEmail(authentication.getName()).orElseThrow();
+
+        // CLIENTE solo ve su propio perfil
+        if (usuario.getRol() == Rol.CLIENTE) {
+            Cliente cliente = usuario.getCliente();
+            if (cliente == null)
+                return ResponseEntity.ok(Page.empty());
+            return ResponseEntity.ok(new PageImpl<>(List.of(toDTO(cliente))));
         }
 
-        List<ClienteDTO> dtos = clientes.stream()
-                .map(this::toDTO)
-                .toList();
-
-        return ResponseEntity.ok(dtos);
+        // VETERINARIO ve todos
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sort));
+        Page<Cliente> clientes = clienteService.findAll(pageable, search);
+        return ResponseEntity.ok(clientes.map(this::toDTO));
     }
 
     /**
@@ -52,10 +71,19 @@ public class ClienteController {
      * GET /api/clientes/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ClienteDTO> obtenerCliente(@PathVariable Long id) {
+    public ResponseEntity<?> obtenerCliente(@PathVariable Long id, Authentication authentication) {
+        Usuario usuario = usuarioRepository.findByEmail(authentication.getName()).orElseThrow();
+
+        // CLIENTE solo puede ver su propio perfil
+        if (usuario.getRol() == Rol.CLIENTE) {
+            if (usuario.getCliente() == null || !usuario.getCliente().getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(java.util.Map.of("error", "No tienes permiso para ver este perfil"));
+            }
+        }
+
         Cliente cliente = clienteService.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("El cliente con ID " + id + " no existe."));
-
         return ResponseEntity.ok(toDTO(cliente));
     }
 
@@ -64,7 +92,8 @@ public class ClienteController {
      * POST /api/clientes (body JSON)
      */
     @PostMapping
-    public ResponseEntity<ClienteDTO> crearCliente(@Valid @RequestBody Cliente cliente) {
+    public ResponseEntity<ClienteDTO> crearCliente(@Valid @RequestBody ClienteDTO clienteDTO) {
+        Cliente cliente = toEntity(clienteDTO);
         cliente.setId(null); // Asegurar creación, no actualización
         Cliente guardado = clienteService.save(cliente);
         return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(guardado));
@@ -77,13 +106,26 @@ public class ClienteController {
     @PutMapping("/{id}")
     public ResponseEntity<ClienteDTO> actualizarCliente(
             @PathVariable Long id,
-            @Valid @RequestBody Cliente cliente) {
+            @RequestBody ClienteDTO clienteDTO) {
 
-        clienteService.findById(id)
+        Cliente clienteDb = clienteService.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("El cliente con ID " + id + " no existe."));
 
-        cliente.setId(id);
-        Cliente guardado = clienteService.save(cliente);
+        // Solo actualizar campos que vengan en el body (no nulos)
+        if (clienteDTO.getNombre() != null)
+            clienteDb.setNombre(clienteDTO.getNombre());
+        if (clienteDTO.getApellidos() != null)
+            clienteDb.setApellidos(clienteDTO.getApellidos());
+        if (clienteDTO.getDni() != null)
+            clienteDb.setDni(clienteDTO.getDni());
+        if (clienteDTO.getTelefono() != null)
+            clienteDb.setTelefono(clienteDTO.getTelefono());
+        if (clienteDTO.getDireccion() != null)
+            clienteDb.setDireccion(clienteDTO.getDireccion());
+        if (clienteDTO.getEmail() != null)
+            clienteDb.setEmail(clienteDTO.getEmail());
+
+        Cliente guardado = clienteService.save(clienteDb);
         return ResponseEntity.ok(toDTO(guardado));
     }
 
@@ -100,7 +142,7 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- Conversión Entity → DTO ---
+    // --- Conversiones Entity ↔ DTO ---
 
     private ClienteDTO toDTO(Cliente c) {
         ClienteDTO dto = new ClienteDTO();
@@ -113,5 +155,16 @@ public class ClienteController {
         dto.setDireccion(c.getDireccion());
         dto.setEmail(c.getEmail());
         return dto;
+    }
+
+    private Cliente toEntity(ClienteDTO dto) {
+        Cliente cliente = new Cliente();
+        cliente.setNombre(dto.getNombre());
+        cliente.setApellidos(dto.getApellidos());
+        cliente.setDni(dto.getDni());
+        cliente.setTelefono(dto.getTelefono());
+        cliente.setDireccion(dto.getDireccion());
+        cliente.setEmail(dto.getEmail());
+        return cliente;
     }
 }

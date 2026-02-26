@@ -1,8 +1,10 @@
+DROP TABLE IF EXISTS usuario;
 DROP TABLE IF EXISTS tratamiento;
 DROP TABLE IF EXISTS cita_veterinaria;
 DROP TABLE IF EXISTS mascota;
 DROP TABLE IF EXISTS veterinario;
 DROP TABLE IF EXISTS cliente;
+
 
 -- 1. Tabla CLIENTE
 CREATE TABLE cliente (
@@ -33,7 +35,8 @@ CREATE TABLE mascota (
     raza VARCHAR(100),
     fecha_nacimiento DATE,
     peso DOUBLE,
-    cliente_id BIGINT,
+    imagen_url VARCHAR(255),
+    cliente_id BIGINT NOT NULL,
     CONSTRAINT fk_mascota_cliente FOREIGN KEY (cliente_id) REFERENCES cliente(id) ON DELETE CASCADE
 );
 
@@ -59,4 +62,16 @@ CREATE TABLE tratamiento (
     observaciones TEXT,
     cita_id BIGINT,
     CONSTRAINT fk_tratamiento_cita FOREIGN KEY (cita_id) REFERENCES cita_veterinaria(id) ON DELETE CASCADE
+);
+
+-- 6. Tabla USUARIO
+CREATE TABLE usuario (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    rol VARCHAR(20) NOT NULL,
+    cliente_id BIGINT,
+    veterinario_id BIGINT,
+    CONSTRAINT fk_usuario_cliente FOREIGN KEY (cliente_id) REFERENCES cliente(id) ON DELETE CASCADE,
+    CONSTRAINT fk_usuario_veterinario FOREIGN KEY (veterinario_id) REFERENCES veterinario(id) ON DELETE CASCADE
 );

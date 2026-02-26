@@ -4,12 +4,15 @@ import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Tratamiento;
 import com.OrtegaAlvaro.ClinicaVeterinaria.repositories.TratamientoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Servicio de lógica de negocio para la gestión de Tratamientos (Servicios Clínicos).
+ * Servicio de lógica de negocio para la gestión de Tratamientos (Servicios
+ * Clínicos).
  * Administra el ciclo de vida de los ítems facturables o procedimientos médicos
  * realizados durante una Cita Veterinaria.
  */
@@ -22,14 +25,23 @@ public class TratamientoService {
     /**
      * Recupera el histórico global de tratamientos realizados.
      * Útil para auditorías o reportes generales de actividad.
+     * 
      * @return Lista de todos los tratamientos.
      */
     public List<Tratamiento> findAll() {
         return tratamientoRepository.findAll();
     }
 
+    public Page<Tratamiento> findAll(Pageable pageable, String search) {
+        if (search != null && !search.trim().isEmpty()) {
+            return tratamientoRepository.findBySearch(search, pageable);
+        }
+        return tratamientoRepository.findAll(pageable);
+    }
+
     /**
      * Busca un tratamiento específico por su identificador.
+     * 
      * @param id Identificador del tratamiento.
      * @return Contenedor Optional con el tratamiento si existe.
      */
@@ -41,6 +53,7 @@ public class TratamientoService {
      * Obtiene todos los tratamientos asociados a una cita concreta.
      * Este método es fundamental para visualizar el detalle económico (factura)
      * y el desglose de servicios dentro de la ficha de la cita.
+     * 
      * @param citaId Identificador de la cita padre.
      */
     public List<Tratamiento> findByCitaId(Long citaId) {
@@ -49,6 +62,7 @@ public class TratamientoService {
 
     /**
      * Persiste (Crea o Actualiza) un tratamiento.
+     * 
      * @param tratamiento Entidad con los datos del servicio a guardar.
      * @return El tratamiento persistido.
      */
@@ -58,6 +72,7 @@ public class TratamientoService {
 
     /**
      * Elimina un tratamiento o línea de servicio.
+     * 
      * @param id Identificador del tratamiento a borrar.
      */
     public void deleteById(Long id) {

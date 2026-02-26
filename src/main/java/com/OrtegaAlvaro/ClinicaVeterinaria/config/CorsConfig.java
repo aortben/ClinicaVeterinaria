@@ -1,7 +1,6 @@
 package com.OrtegaAlvaro.ClinicaVeterinaria.config;
 
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -10,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Angular.
  * En desarrollo, Angular corre típicamente en http://localhost:4200.
  */
-@Configuration
+// @Configuration deshabilitado en favor de SecurityConfig
 public class CorsConfig {
 
     @Bean

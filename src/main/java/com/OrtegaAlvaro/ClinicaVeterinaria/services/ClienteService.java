@@ -4,6 +4,8 @@ import com.OrtegaAlvaro.ClinicaVeterinaria.entities.Cliente;
 import com.OrtegaAlvaro.ClinicaVeterinaria.repositories.ClienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,14 +23,23 @@ public class ClienteService {
 
     /**
      * Obtiene el listado completo de clientes registrados en el sistema.
+     * 
      * @return Lista de todos los clientes.
      */
     public List<Cliente> findAll() {
         return clienteRepository.findAll();
     }
 
+    public Page<Cliente> findAll(Pageable pageable, String search) {
+        if (search != null && !search.trim().isEmpty()) {
+            return clienteRepository.findBySearch(search, pageable);
+        }
+        return clienteRepository.findAll(pageable);
+    }
+
     /**
      * Recupera un cliente por su identificador único de base de datos.
+     * 
      * @param id Identificador del cliente.
      * @return Contenedor Optional con el cliente si existe.
      */
@@ -39,6 +50,7 @@ public class ClienteService {
     /**
      * Busca un cliente por su Documento Nacional de Identidad.
      * Fundamental para validar duplicados antes de crear un nuevo registro.
+     * 
      * @param dni DNI exacto a buscar.
      */
     public Optional<Cliente> findByDni(String dni) {
@@ -48,6 +60,7 @@ public class ClienteService {
     /**
      * Realiza una búsqueda flexible de clientes filtrando por apellidos.
      * Utilizado en la barra de búsqueda de la interfaz de usuario.
+     * 
      * @param apellidos Texto a buscar (insensible a mayúsculas).
      */
     public List<Cliente> buscarPorApellidos(String apellidos) {
@@ -56,6 +69,7 @@ public class ClienteService {
 
     /**
      * Persiste (Crea o Actualiza) los datos de un cliente.
+     * 
      * @param cliente Entidad con los datos a guardar.
      * @return El cliente persistido.
      */
@@ -65,6 +79,7 @@ public class ClienteService {
 
     /**
      * Elimina un cliente del sistema.
+     * 
      * @param id Identificador del cliente a eliminar.
      */
     public void deleteById(Long id) {

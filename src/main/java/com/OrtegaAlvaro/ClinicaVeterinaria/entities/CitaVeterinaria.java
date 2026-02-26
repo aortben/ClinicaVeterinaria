@@ -11,8 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entidad central del sistema que representa un evento médico o servicio agendado.
- * Actúa como punto de unión entre el Paciente (Mascota), el Profesional (Veterinario)
+ * Entidad central del sistema que representa un evento médico o servicio
+ * agendado.
+ * Actúa como punto de unión entre el Paciente (Mascota), el Profesional
+ * (Veterinario)
  * y los servicios económicos realizados (Tratamientos).
  */
 @Entity
@@ -57,17 +59,19 @@ public class CitaVeterinaria {
     /**
      * Profesional que atiende la cita.
      * Relación N:1 (Un veterinario atiende muchas citas).
+     * Nullable: si el veterinario se da de baja, la cita permanece con veterinario
+     * = NULL.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "veterinario_id", nullable = false)
-    @NotNull(message = "Debes asignar un veterinario")
+    @JoinColumn(name = "veterinario_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Veterinario veterinario;
 
     /**
      * Lista de servicios o tratamientos aplicados en esta cita.
-     * Relación 1:N con cascada total (Si se borra la cita, se borran sus líneas de tratamiento).
+     * Relación 1:N con cascada total (Si se borra la cita, se borran sus líneas de
+     * tratamiento).
      */
     @OneToMany(mappedBy = "cita", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
@@ -79,6 +83,7 @@ public class CitaVeterinaria {
     /**
      * Método helper para establecer la relación bidireccional
      * al añadir un tratamiento a la lista.
+     * 
      * @param tratamiento El servicio a añadir.
      */
     public void addTratamiento(Tratamiento tratamiento) {
@@ -87,7 +92,9 @@ public class CitaVeterinaria {
     }
 
     /**
-     * Calcula el coste total de la cita sumando el precio de todos los tratamientos asociados.
+     * Calcula el coste total de la cita sumando el precio de todos los tratamientos
+     * asociados.
+     * 
      * @return Suma total o 0.0 si no hay tratamientos.
      */
     public Double getCosteTotal() {
@@ -100,11 +107,13 @@ public class CitaVeterinaria {
     }
 
     // --- MÉTODOS HELPER PARA LA VISTA (DTO-Like) ---
-    // Estos métodos facilitan la visualización en Thymeleaf manejando posibles nulos
+    // Estos métodos facilitan la visualización en Thymeleaf manejando posibles
+    // nulos
     // si las entidades relacionadas (Mascota/Veterinario) han sido eliminadas.
 
     /**
      * Devuelve el nombre completo del veterinario de forma segura.
+     * 
      * @return Nombre del veterinario o texto de aviso si es null.
      */
     public String getNombreVeterinarioStr() {
@@ -116,6 +125,7 @@ public class CitaVeterinaria {
 
     /**
      * Devuelve el nombre de la mascota de forma segura.
+     * 
      * @return Nombre de la mascota o texto de aviso si es null.
      */
     public String getNombreMascotaStr() {
@@ -125,4 +135,3 @@ public class CitaVeterinaria {
         return this.mascota.getNombre();
     }
 }
-

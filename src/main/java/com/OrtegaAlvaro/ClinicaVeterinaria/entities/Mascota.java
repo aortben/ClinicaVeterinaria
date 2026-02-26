@@ -15,7 +15,8 @@ import java.util.List;
 
 /**
  * Entidad que representa al Paciente (Animal) dentro del sistema clínico.
- * Almacena los datos fisiológicos básicos y mantiene el historial médico (Citas)
+ * Almacena los datos fisiológicos básicos y mantiene el historial médico
+ * (Citas)
  * así como la vinculación con su propietario (Cliente).
  */
 @Entity
@@ -46,6 +47,8 @@ public class Mascota {
     @Positive(message = "El peso debe ser un valor positivo")
     private Double peso;
 
+    private String imagenUrl;
+
     // --- RELACIONES ---
 
     /**
@@ -61,7 +64,8 @@ public class Mascota {
 
     /**
      * Historial médico de la mascota.
-     * Relación 1:N. Si se elimina la mascota, se elimina su historial completo (CascadeType.ALL).
+     * Relación 1:N. Si se elimina la mascota, se elimina su historial completo
+     * (CascadeType.ALL).
      */
     @OneToMany(mappedBy = "mascota", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
